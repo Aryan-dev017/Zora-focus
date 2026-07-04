@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "OwlApp",
-    "slug": "OwlApp",
+    "name": "Zora Focus",
+    "slug": "zora-focus",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/branding/logo.png",
     "scheme": "owlapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -13,36 +13,63 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#C9FBF5",
+        "foregroundImage": "./assets/branding/logo.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.alestor.zorafocus"
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/branding/logo.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
+          "image": "./assets/branding/background.png",
+          "imageWidth": 560,
+          "resizeMode": "cover",
+          "backgroundColor": "#120D2B",
           "dark": {
-            "backgroundColor": "#000000"
+            "image": "./assets/branding/background.png",
+            "backgroundColor": "#120D2B"
           }
+        }
+      ],
+      "expo-font",
+      "expo-video",
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://sentry.io/",
+          "project": "react-native",
+          "organization": "aks-apps"
+        }
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-3940256099942544~3347511713",
+          "iosAppId": "ca-app-pub-3940256099942544~1458002511",
+          "delayAppMeasurementInit": true,
+          "optimizeInitialization": true,
+          "optimizeAdLoading": true
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "bf9b2b24-1880-4be7-b5d3-9c6adeb6cc72"
+      }
+    },
+    "owner": "a.k.s_builds"
   }
 }
