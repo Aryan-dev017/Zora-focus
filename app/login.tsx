@@ -131,6 +131,42 @@ const HERO_POINTS = [
   { icon: 'bar-chart-2', label: 'Live progress' },
 ] as const;
 
+const GOOGLE_REDIRECT_PATH = 'auth/callback';
+
+function getGoogleRedirectTo(): string {
+  return ENV.supabaseAuthRedirectUrl || Linking.createURL(GOOGLE_REDIRECT_PATH);
+}
+
+function getUrlParam(url: string, key: string): string | null {
+  try {
+    const parsed = new URL(url);
+    const queryValue = parsed.searchParams.get(key);
+    if (queryValue) return queryValue;
+
+    const hash = parsed.hash.replace(/^#/, '');
+    return new URLSearchParams(hash).get(key);
+  } catch {
+    const value = Linking.parse(url).queryParams?.[key];
+    return typeof value === 'string' ? value : null;
+  }
+}
+
+function getGoogleAuthErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error ?? '');
+
+  if (/network|fetch|internet|offline|timeout|econn/i.test(message)) {
+    return 'We could not reach Google. Check your internet connection and try again.';
+  }
+  if (/expired|invalid_grant|token/i.test(message)) {
+    return 'This Google sign-in session expired. Please try again.';
+  }
+  if (/redirect|not allowed|callback/i.test(message)) {
+    return 'Google sign-in is not fully configured. Check the OAuth redirect settings.';
+  }
+
+  return message || 'Something went wrong while signing in with Google. Please try again.';
+}
+
 function HeroBadge({ icon, label }: { icon: keyof typeof Feather.glyphMap; label: string }) {
   return (
     <View style={styles.heroBadge}>
@@ -278,6 +314,8 @@ export default function AuthScreen() {
   const [password, setPassword] = useState('');
   const [confirm,  setConfirm]  = useState('');
   const [loading,  setLoading]  = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const authBusy = loading || googleLoading;
 
   // Field errors
   const [emailErr,   setEmailErr]   = useState('');
@@ -336,6 +374,7 @@ export default function AuthScreen() {
 
   // ── Sign In
   const handleSignIn = async () => {
+    if (authBusy) return;
     if (!validate()) return;
     setLoading(true);
     const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
@@ -370,6 +409,7 @@ export default function AuthScreen() {
 
   // ── Sign Up
   const handleSignUp = async () => {
+    if (authBusy) return;
     if (!validate()) return;
     setLoading(true);
 
@@ -425,8 +465,11 @@ export default function AuthScreen() {
 
   // ── Google OAuth (requires Expo AuthSession setup)
   const handleGoogle = async () => {
+    if (authBusy) return;
+    setGoogleLoading(true);
+
     try {
-      const redirectTo = ENV.supabaseAuthRedirectUrl || Linking.createURL('auth/callback');
+      const redirectTo = getGoogleRedirectTo();
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -436,39 +479,47 @@ export default function AuthScreen() {
       });
 
       if (error) {
-        Alert.alert('Google sign in failed', error.message);
+        Alert.alert('Google sign-in failed', getGoogleAuthErrorMessage(error));
         return;
       }
       if (!data?.url) {
-        Alert.alert('Google sign in failed', 'No OAuth URL was returned. Please try again.');
+        Alert.alert('Google sign-in failed', 'Google did not return a sign-in URL. Please try again.');
         return;
       }
 
       const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
       if (result.type !== 'success' || !result.url) {
-        if (result.type !== 'cancel' && result.type !== 'dismiss') {
-          Alert.alert('Google sign in incomplete', 'Please try again.');
+        if (result.type === 'cancel' || result.type === 'dismiss') {
+          Alert.alert('Google sign-in cancelled', 'No changes were made to your account.');
+        } else {
+          Alert.alert('Google sign-in incomplete', 'Please try again.');
         }
         return;
       }
 
-      const parsed = Linking.parse(result.url);
-      const codeParam = parsed.queryParams?.code;
-      const authCode = typeof codeParam === 'string' ? codeParam : null;
+      const oauthError = getUrlParam(result.url, 'error_description') ?? getUrlParam(result.url, 'error');
+      if (oauthError) {
+        Alert.alert('Google sign-in failed', getGoogleAuthErrorMessage(oauthError));
+        return;
+      }
+
+      const authCode = getUrlParam(result.url, 'code');
       if (!authCode) {
-        Alert.alert('Google sign in failed', 'Missing auth code from redirect.');
+        Alert.alert(
+          'Google sign-in failed',
+          'Google did not return an auth code. Check the Supabase redirect URL allow list.'
+        );
         return;
       }
 
       const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(authCode);
       if (exchangeError) {
-        Alert.alert('Google sign in failed', exchangeError.message);
+        Alert.alert('Google sign-in failed', getGoogleAuthErrorMessage(exchangeError));
       }
     } catch (e) {
-      Alert.alert(
-        'Google sign in failed',
-        e instanceof Error ? e.message : 'Unexpected authentication error'
-      );
+      Alert.alert('Google sign-in failed', getGoogleAuthErrorMessage(e));
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -619,7 +670,7 @@ export default function AuthScreen() {
               <Animated.View entering={FadeInUp.delay(300).duration(380)}>
                 <TouchableOpacity
                   onPress={mode === 'signin' ? handleSignIn : handleSignUp}
-                  disabled={loading}
+                  disabled={authBusy}
                   activeOpacity={1}
                 >
                   <LinearGradient
@@ -660,11 +711,17 @@ export default function AuthScreen() {
               <Animated.View entering={FadeInUp.delay(380).duration(360)}>
                 <TouchableOpacity
                   onPress={handleGoogle}
+                  disabled={authBusy}
                   activeOpacity={0.85}
-                  style={styles.googleBtn}
+                  style={[styles.googleBtn, authBusy && { opacity: 0.7 }]}
                 >
-                  <IcoGoogle size={20} />
-                  <Text style={styles.googleTxt}>Continue with Google</Text>
+                  {googleLoading
+                    ? <ActivityIndicator color={T.txt} size="small" />
+                    : <IcoGoogle size={20} />
+                  }
+                  <Text style={styles.googleTxt}>
+                    {googleLoading ? 'Connecting to Google...' : 'Continue with Google'}
+                  </Text>
                 </TouchableOpacity>
               </Animated.View>
             </View>
