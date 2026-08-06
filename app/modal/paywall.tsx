@@ -5,7 +5,6 @@
 //   (default)   → Custom paywall fed by live RC packages + real prices
 //   ?mode=rc    → Native RevenueCatUI.Paywall (managed from RC Dashboard)
 //
-// Mascot: assets/mascot/mascot.png  (pink leopard character)
 // ─────────────────────────────────────────────────────────────────────────────
 
 import React, { useState, useEffect } from 'react';
