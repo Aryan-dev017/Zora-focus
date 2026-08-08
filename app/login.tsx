@@ -488,34 +488,123 @@ export default function AuthScreen() {
       }
 
       const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
-      if (result.type !== 'success' || !result.url) {
-        if (result.type === 'cancel' || result.type === 'dismiss') {
-          Alert.alert('Google sign-in cancelled', 'No changes were made to your account.');
-        } else {
-          Alert.alert('Google sign-in incomplete', 'Please try again.');
-        }
-        return;
-      }
 
-      const oauthError = getUrlParam(result.url, 'error_description') ?? getUrlParam(result.url, 'error');
-      if (oauthError) {
-        Alert.alert('Google sign-in failed', getGoogleAuthErrorMessage(oauthError));
-        return;
-      }
+console.log('[Google OAuth] result type:', result.type);
 
-      const authCode = getUrlParam(result.url, 'code');
-      if (!authCode) {
-        Alert.alert(
-          'Google sign-in failed',
-          'Google did not return an auth code. Check the Supabase redirect URL allow list.'
-        );
-        return;
-      }
+const resultUrl =
+  'url' in result && typeof result.url === 'string'
+    ? result.url
+    : null;
 
-      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(authCode);
-      if (exchangeError) {
-        Alert.alert('Google sign-in failed', getGoogleAuthErrorMessage(exchangeError));
-      }
+
+
+if (result.type !== 'success' || !resultUrl) {
+  if (result.type === 'cancel' || result.type === 'dismiss') {
+    Alert.alert(
+      'Google sign-in cancelled',
+      'No changes were made to your account.'
+    );
+  } else {
+    Alert.alert(
+      'Google sign-in incomplete',
+      'Please try again.'
+    );
+  }
+  return;
+}
+
+const oauthError =
+  getUrlParam(resultUrl, 'error_description') ??
+  getUrlParam(resultUrl, 'error');
+
+if (oauthError) {
+  Alert.alert(
+    'Google sign-in failed',
+    getGoogleAuthErrorMessage(oauthError)
+  );
+  return;
+}
+
+
+
+try {
+  const parsed = new URL(resultUrl);
+
+  console.log(
+    '[Google OAuth] query params:',
+    Object.fromEntries(parsed.searchParams.entries())
+  );
+
+  
+} catch (e) {
+  console.log('[Google OAuth] URL parse failed:', e);
+}
+
+const accessToken = getUrlParam(resultUrl, 'access_token');
+const refreshToken = getUrlParam(resultUrl, 'refresh_token');
+
+console.log(
+  '[Google OAuth] access token:',
+  accessToken ? 'FOUND' : 'NOT FOUND'
+);
+
+console.log(
+  '[Google OAuth] refresh token:',
+  refreshToken ? 'FOUND' : 'NOT FOUND'
+);
+
+if (!accessToken || !refreshToken) {
+  Alert.alert(
+    'Google sign-in failed',
+    'Google authentication completed, but no valid Supabase session was returned.'
+  );
+  return;
+}
+
+const { data: sessionData, error: sessionError } =
+  await supabase.auth.setSession({
+    access_token: accessToken,
+    refresh_token: refreshToken,
+  });
+
+if (sessionError) {
+  Alert.alert(
+    'Google sign-in failed',
+    getGoogleAuthErrorMessage(sessionError)
+  );
+  return;
+}
+
+const userId = sessionData.session?.user?.id;
+
+if (!userId) {
+  Alert.alert(
+    'Google sign-in failed',
+    'Authentication succeeded, but no user session was created.'
+  );
+  return;
+}
+
+console.log('[Google OAuth] session established successfully');
+
+const { data: profile, error: profileError } = await supabase
+  .from('user_profiles')
+  .select('onboarding_completed')
+  .eq('id', userId)
+  .maybeSingle();
+
+if (profileError) {
+  console.log(
+    '[Google OAuth] profile lookup failed:',
+    profileError.message
+  );
+}
+
+if (profile?.onboarding_completed) {
+  router.replace('/(tabs)/home');
+} else {
+  router.replace('/onboarding');
+}
     } catch (e) {
       Alert.alert('Google sign-in failed', getGoogleAuthErrorMessage(e));
     } finally {
