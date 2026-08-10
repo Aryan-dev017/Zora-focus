@@ -21,10 +21,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import Svg, { Path, Circle } from 'react-native-svg';
-import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
+import RevenueCatUI from 'react-native-purchases-ui';
 import type { CustomerInfo } from 'react-native-purchases';
 import { useRevenueCat } from '../context/RevenueCatProvider';
-import { isExpoGo } from '@/lib/purchases';
+import { ENTITLEMENT_ID, isExpoGo } from '@/lib/purchases';
 
 const { width: W } = Dimensions.get('window');
 
@@ -94,7 +94,7 @@ function NativeRCPaywall() {
         }}
         onRestoreCompleted={({ customerInfo }: { customerInfo: CustomerInfo }) => {
           refreshStatus();
-          if (customerInfo.entitlements.active['Zora Pro']) {
+          if (customerInfo.entitlements.active[ENTITLEMENT_ID]) {
             Alert.alert('Restored! 🎉', 'Pro access restored.');
             router.back();
           }
