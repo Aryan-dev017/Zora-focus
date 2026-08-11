@@ -12,8 +12,8 @@
 //   • listenForCustomerInfoUpdates() — subscribe to live updates
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { Platform } from 'react-native';
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 import Purchases, {
   CustomerInfo,
   LOG_LEVEL,
@@ -49,10 +49,10 @@ let revenueCatConfigurePromise: Promise<void> | null = null;
 export const ENTITLEMENT_ID = 'Zora Pro';
 
 // Product identifiers — must match the identifiers you created in the RC dashboard
-export const PRODUCT_IDS = {
-  monthly:  'monthly',
-  yearly:   'yearly',
-  lifetime: 'lifetime',
+export const PACKAGE_IDS = {
+  monthly: '$rc_monthly',
+  yearly: '$rc_annual',
+  lifetime: '$rc_lifetime',
 } as const;
 
 // ─── Configure ────────────────────────────────────────────────────────────────
@@ -195,9 +195,9 @@ export async function getOwlOffering(): Promise<OwlOffering> {
 
     return {
       raw:      current,
-      monthly:  findPkg(PRODUCT_IDS.monthly),
-      yearly:   findPkg(PRODUCT_IDS.yearly),
-      lifetime: findPkg(PRODUCT_IDS.lifetime),
+      monthly:  findPkg(PACKAGE_IDS.monthly),
+      yearly:   findPkg(PACKAGE_IDS.yearly),
+      lifetime: findPkg(PACKAGE_IDS.lifetime),
     };
   } catch (e) {
     console.error('[RC] getOwlOffering error:', e);
