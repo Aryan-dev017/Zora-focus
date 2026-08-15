@@ -66,85 +66,11 @@ try {
   VideoView      = v.VideoView;
 } catch {}
 
-// ─── AdMob ────────────────────────────────────────────────────────────────────
-//
-// Real ad unit IDs from the dashboard:
-//   Interstitial: ca-app-pub-3821213948228348/7547711977
-//   Rewarded:     ca-app-pub-3821213948228348/7274366301
-//
-// Rules:
+// ─── AdMob (platform-specific: native → real AdMob, web → safe no-op) ────────
 //   showInterstitialAd() — shown after focus session complete (non-blocking, fire-and-forget)
 //   showRewardedAd()     — shown before free music track plays
 //                          tracks require 2 rewarded-ad watches to unlock per session
-//   Music: after 2 rewarded ads watched, user can pause/play freely for that track
-
-let RewardedAd: any          = null;
-let RewardedAdEventType: any = null;
-let InterstitialAd: any      = null;
-let AdEventType: any         = null;
-let TestIds: any             = null;
-try {
-  const ads = require('react-native-google-mobile-ads');
-  RewardedAd          = ads.RewardedAd;
-  RewardedAdEventType = ads.RewardedAdEventType;
-  InterstitialAd      = ads.InterstitialAd;
-  AdEventType         = ads.AdEventType;
-  TestIds             = ads.TestIds;
-} catch {}
-
-// ── Ad unit IDs ────────────────────────────────────────────────────────────
-const REWARDED_AD_ID = __DEV__
-  ? (TestIds?.REWARDED      ?? 'ca-app-pub-3940256099942544/5224354917')
-  : 'ca-app-pub-3821213948228348/7274366301';
-
-const INTERSTITIAL_AD_ID = __DEV__
-  ? (TestIds?.INTERSTITIAL   ?? 'ca-app-pub-3940256099942544/1033173712')
-  : 'ca-app-pub-3821213948228348/7547711977';
-
-// ── Show a rewarded ad — resolves true if user earns reward, false if skipped
-async function showRewardedAd(): Promise<boolean> {
-  if (!RewardedAd || !RewardedAdEventType) return __DEV__;
-  return new Promise(resolve => {
-    try {
-      const ad = RewardedAd.createForAdRequest(REWARDED_AD_ID, {
-        requestNonPersonalizedAdsOnly: true,
-      });
-      let settled = false;
-      const done = (v: boolean) => {
-        if (settled) return;
-        settled = true;
-        try { unsubs.forEach(u => u()); } catch {}
-        resolve(v);
-      };
-      const unsubs = [
-        ad.addAdEventListener(RewardedAdEventType.USER_EARNED_REWARD, () => done(true)),
-        ad.addAdEventListener(RewardedAdEventType.CLOSED,             () => done(false)),
-        ad.addAdEventListener(RewardedAdEventType.ERROR,              () => done(false)),
-        ad.addAdEventListener('loaded',                               () => ad.show()),
-      ];
-      ad.load();
-    } catch {
-      resolve(__DEV__);
-    }
-  });
-}
-
-// ── Show a non-blocking interstitial ad (fire-and-forget after session)
-function showInterstitialAd(): void {
-  if (!InterstitialAd || !AdEventType) return;
-  try {
-    const ad = InterstitialAd.createForAdRequest(INTERSTITIAL_AD_ID, {
-      requestNonPersonalizedAdsOnly: true,
-    });
-    const unsub = ad.addAdEventListener('loaded', () => {
-      try { unsub(); ad.show(); } catch {}
-    });
-    ad.addAdEventListener(AdEventType.ERROR, () => {
-      try { unsub(); } catch {}
-    });
-    ad.load();
-  } catch {}
-}
+import { showInterstitialAd, showRewardedAd } from '@/lib/adMob';
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
 

@@ -33,7 +33,7 @@ export const isExpoGo =
 // In release builds, keep these in EXPO_PUBLIC_REVENUECAT_*_API_KEY.
 const DEV_FALLBACK_RC_KEYS = {
   ios: 'test_gAKEhkBMTjBQjrPFqIKkjonsuMl',
-  android: 'goog_uydQKrvxwxKQNHuaYSASSkbjZGh',
+  android: 'test_gAKEhkBMTjBQjrPFqIKkjonsuMl',
 };
 
 const RC_KEYS = {

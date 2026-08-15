@@ -23,40 +23,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { readLocalTasks, readLocalStreak, syncLocalStateToSupabase } from '@/lib/localState';
-
-// ─── AdMob ────────────────────────────────────────────────────────────────────
-// Interstitial shown when user completes ALL daily tasks (daily goal reached)
-// Not shown to Pro users
-
-let InterstitialAd_t: any = null;
-let AdEventType_t: any    = null;
-let TestIds_t: any        = null;
-try {
-  const ads = require('react-native-google-mobile-ads');
-  InterstitialAd_t = ads.InterstitialAd;
-  AdEventType_t    = ads.AdEventType;
-  TestIds_t        = ads.TestIds;
-} catch {}
-
-const INTERSTITIAL_ID_TASKS = __DEV__
-  ? (TestIds_t?.INTERSTITIAL ?? 'ca-app-pub-3940256099942544/1033173712')
-  : 'ca-app-pub-3821213948228348/7547711977';
-
-function showTasksInterstitial(): void {
-  if (!InterstitialAd_t || !AdEventType_t) return;
-  try {
-    const ad = InterstitialAd_t.createForAdRequest(INTERSTITIAL_ID_TASKS, {
-      requestNonPersonalizedAdsOnly: true,
-    });
-    const unsub = ad.addAdEventListener('loaded', () => {
-      try { unsub(); ad.show(); } catch {}
-    });
-    ad.addAdEventListener(AdEventType_t.ERROR, () => {
-      try { unsub(); } catch {}
-    });
-    ad.load();
-  } catch {}
-}
+import { showTasksInterstitial } from '@/lib/adMob';
 import { useStreakAnimation, useXpPopup, useHaptics } from '@/lib/Interactions';
 import { StreakBadge, XpBurst, StreakFirstDayToast } from '@/components/Microinteractions';
 import { XpCelebrationModal } from '@/components/XpCelebrationModal';
