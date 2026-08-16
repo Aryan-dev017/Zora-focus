@@ -893,8 +893,9 @@ export default function FocusScreen() {
 
     // Free tracks require 2 rewarded ads watched per session to unlock
     // After 2 ads, user can freely pause/play that track
+    // Pro users bypass this ad gate entirely — same as premium tracks above.
     const watchedCount = adWatchCount.get(track.id) ?? 0;
-    if (track.free && watchedCount < 2) {
+    if (!isPro && track.free && watchedCount < 2) {
       const remaining = 2 - watchedCount;
       Alert.alert(
         remaining === 2 ? 'Watch 2 Ads to Unlock 🎵' : '1 More Ad to Unlock 🎵',

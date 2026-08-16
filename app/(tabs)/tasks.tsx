@@ -45,8 +45,12 @@ import { awardXP, revokeXP, getLevelInfo, getNextLevel, xpToNextLevel, getLevelP
 
 
 
-const { width: W } = Dimensions.get('window');
+const { width: W, height: SCREEN_H } = Dimensions.get('window');
 const FREE_LIMIT = 5;
+// Bottom sheet caps at the available viewport height so it never extends
+// beyond the screen on small devices, while remaining scrollable when the
+// content exceeds that limit.
+const MAX_SHEET_H = SCREEN_H - 40;
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const TIER_COLOR = {
   S: '#F26B6B',
@@ -598,6 +602,15 @@ function AddTaskSheet({visible,onClose,onAdd,section,streak}:{
   const [category,   setCategory]  = useState<XpCategory>('work');
   const ty=useSharedValue(600); const oop=useSharedValue(0);
 
+  // The task sheet is a bottom overlay rendered inside the Tabs screen, which
+  // sits BEHIND the fixed bottom navigation bar. Push the scrollable content up
+  // by the tab bar's real footprint (tab height + system nav insets + breathing
+  // room) so the last field/button never lands under the navigation.
+  // BAR_H (68) matches `BAR_H` in app/(tabs)/_layout.tsx.
+  const sheetInsets = useSafeAreaInsets();
+  const BAR_H = 68;
+  const contentBottomPad = sheetInsets.bottom + BAR_H + 4 + 24;
+
   useEffect(()=>{setName('');},[visible]);
   useEffect(()=>{
     oop.value=withTiming(visible?1:0,{duration:220});
@@ -638,70 +651,76 @@ const preview = calculateXp(
         <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onClose}/>
       </Animated.View>
       <KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':'height'} style={S.sheetKAV} pointerEvents="box-none">
-        <Animated.View style={[S.sheet,sheetS]}>
+        <Animated.View style={[S.sheet, sheetS, { maxHeight: MAX_SHEET_H }]}>
           <View style={S.sheetHandle}/>
-          <Text style={S.sheetTitle}>{section==='daily'?'⚡ Daily Task':'🎯 Weekly Goal'}</Text>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            keyboardDismissMode="interactive"
+             contentContainerStyle={{ gap: 14, paddingBottom: contentBottomPad }}
+          >
+            <Text style={S.sheetTitle}>{section==='daily'?'⚡ Daily Task':'🎯 Weekly Goal'}</Text>
 
-          <TextInput style={S.sheetInput} value={name} onChangeText={setName}
-            placeholder="Task name…" placeholderTextColor={T.txt3} autoFocus/>
+            <TextInput style={S.sheetInput} value={name} onChangeText={setName}
+              placeholder="Task name…" placeholderTextColor={T.txt3} autoFocus/>
 
-          {/* Urgency picker */}
-          <Text style={S.sheetLabel}>Urgency</Text>
-          <View style={S.row}>
-            {URGENCY_OPTS.map(o=>(
-              <TouchableOpacity key={o.val} onPress={()=>setUrgency(o.val)}
-                style={[S.pill, urgency===o.val&&{backgroundColor:'rgba(242,107,107,0.12)',borderColor:T.red}]}>
-                <Text style={[S.pillTxt,{color:urgency===o.val?T.red:T.txt3}]}>{o.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Importance picker */}
-          <Text style={S.sheetLabel}>Importance</Text>
-          <View style={S.row}>
-            {IMPORT_OPTS.map(o=>(
-              <TouchableOpacity key={o.val} onPress={()=>setImportance(o.val)}
-                style={[S.pill, importance===o.val&&{backgroundColor:T.accentD,borderColor:T.accent}]}>
-                <Text style={[S.pillTxt,{color:importance===o.val?T.accentL:T.txt3}]}>{o.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Category picker */}
-          <Text style={S.sheetLabel}>Category</Text>
-          <View style={S.row}>
-            {CATEGORY_OPTS.map(c=>{
-              const cm=CAT_META[c];
-              return (
-                <TouchableOpacity key={c} onPress={()=>setCategory(c)}
-                  style={[S.pill,category===c&&{backgroundColor:cm.bg,borderColor:cm.color}]}>
-                  <Text style={[S.pillTxt,{color:category===c?cm.color:T.txt3}]}>{c}</Text>
+            {/* Urgency picker */}
+            <Text style={S.sheetLabel}>Urgency</Text>
+            <View style={S.row}>
+              {URGENCY_OPTS.map(o=>(
+                <TouchableOpacity key={o.val} onPress={()=>setUrgency(o.val)}
+                  style={[S.pill, urgency===o.val&&{backgroundColor:'rgba(242,107,107,0.12)',borderColor:T.red}]}>
+                  <Text style={[S.pillTxt,{color:urgency===o.val?T.red:T.txt3}]}>{o.label}</Text>
                 </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          {/* XP Preview — live calculation */}
-          <View style={S.xpPreview}>
-            <View style={{flexDirection:'row',alignItems:'center',gap:6}}>
-              <View style={[S.tierDot,{backgroundColor:TIER_COLOR[preview.tier]}]}/>
-              <Text style={[S.tierLabel,{color:TIER_COLOR[preview.tier]}]}>
-                Tier {preview.tier} — {preview.tierLabel}
-              </Text>
+              ))}
             </View>
-            <View style={{flexDirection:'row',alignItems:'center',gap:6}}>
-              <Text style={S.xpPreviewNum}>+{preview.total} XP</Text>
-              {preview.streakBonus>0&&(
-                <Text style={S.xpPreviewBonus}>+🔥{preview.streakBonus} streak bonus</Text>
-              )}
-            </View>
-          </View>
 
-          <TouchableOpacity onPress={handleAdd} activeOpacity={0.85}>
-            <LinearGradient colors={['#8B7EF8','#5C4FD4']} start={{x:0,y:0}} end={{x:1,y:0}} style={S.saveBtn}>
-              <IcoPlus size={18} color="#fff"/><Text style={S.saveBtnTxt}>Add Task</Text>
-            </LinearGradient>
-          </TouchableOpacity>
+            {/* Importance picker */}
+            <Text style={S.sheetLabel}>Importance</Text>
+            <View style={S.row}>
+              {IMPORT_OPTS.map(o=>(
+                <TouchableOpacity key={o.val} onPress={()=>setImportance(o.val)}
+                  style={[S.pill, importance===o.val&&{backgroundColor:T.accentD,borderColor:T.accent}]}>
+                  <Text style={[S.pillTxt,{color:importance===o.val?T.accentL:T.txt3}]}>{o.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Category picker */}
+            <Text style={S.sheetLabel}>Category</Text>
+            <View style={S.row}>
+              {CATEGORY_OPTS.map(c=>{
+                const cm=CAT_META[c];
+                return (
+                  <TouchableOpacity key={c} onPress={()=>setCategory(c)}
+                    style={[S.pill,category===c&&{backgroundColor:cm.bg,borderColor:cm.color}]}>
+                    <Text style={[S.pillTxt,{color:category===c?cm.color:T.txt3}]}>{c}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* XP Preview — live calculation */}
+            <View style={S.xpPreview}>
+              <View style={{flexDirection:'row',alignItems:'center',gap:6}}>
+                <View style={[S.tierDot,{backgroundColor:TIER_COLOR[preview.tier]}]}/>
+                <Text style={[S.tierLabel,{color:TIER_COLOR[preview.tier]}]}>
+                  Tier {preview.tier} — {preview.tierLabel}
+                </Text>
+              </View>
+              <View style={{flexDirection:'row',alignItems:'center',gap:6}}>
+                <Text style={S.xpPreviewNum}>+{preview.total} XP</Text>
+                {preview.streakBonus>0&&(
+                  <Text style={S.xpPreviewBonus}>+🔥{preview.streakBonus} streak bonus</Text>
+                )}
+              </View>
+            </View>
+
+            <TouchableOpacity onPress={handleAdd} activeOpacity={0.85}>
+              <LinearGradient colors={['#8B7EF8','#5C4FD4']} start={{x:0,y:0}} end={{x:1,y:0}} style={S.saveBtn}>
+                <IcoPlus size={18} color="#fff"/><Text style={S.saveBtnTxt}>Add Task</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </ScrollView>
         </Animated.View>
       </KeyboardAvoidingView>
     </View>
