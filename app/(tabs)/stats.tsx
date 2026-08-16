@@ -306,7 +306,7 @@ const board = StyleSheet.create({
 
 // ─── STATS TAB ────────────────────────────────────────────────────────────────
 
-function StatsTab({ userId }: { userId: string }) {
+function StatsTab({ userId, bottomInset }: { userId: string; bottomInset: number }) {
   const [xpState,  setXpState]  = useState<UserXpState | null>(null);
   const [weekly,   setWeekly]   = useState<DayXp[]>([]);
   const [monthly,  setMonthly]  = useState<MonthXp[]>([]);
@@ -365,7 +365,7 @@ function StatsTab({ userId }: { userId: string }) {
   return (
     <ScrollView showsVerticalScrollIndicator={false}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={T.accent}/>}
-      contentContainerStyle={{ gap:24, paddingBottom:28 }}>
+      contentContainerStyle={{ gap:24, paddingBottom: bottomInset }}>
 
       {/* Milestone mascot — appears when user hits daily goal or all tasks */}
       {(allTasksDone || goalReached) && (
@@ -449,7 +449,7 @@ function StatsTab({ userId }: { userId: string }) {
 
 // ─── LEADERBOARD TAB ──────────────────────────────────────────────────────────
 
-function LeaderboardTab({ userId }: { userId: string }) {
+function LeaderboardTab({ userId, bottomInset }: { userId: string; bottomInset: number }) {
   const [rows,      setRows]     = useState<LeaderRow[]>([]);
   const [myRow,     setMyRow]    = useState<LeaderRow | null>(null);
   const [scope,     setScope]    = useState<'global'|'daily'>('global');
@@ -488,7 +488,7 @@ function LeaderboardTab({ userId }: { userId: string }) {
   return (
     <ScrollView showsVerticalScrollIndicator={false}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={T.accent}/>}
-      contentContainerStyle={{gap:12,paddingBottom:20}}>
+      contentContainerStyle={{gap:12,paddingBottom:bottomInset}}>
 
       {/* Scope toggle */}
       <Animated.View entering={FadeInUp.delay(0).duration(280)}>
@@ -539,6 +539,8 @@ function LeaderboardTab({ userId }: { userId: string }) {
 
 export default function StatsScreen() {
   const insets  = useSafeAreaInsets();
+  // Bottom nav footprint = BAR_H(68) + safe-area + 4 padding + 16px breathing room.
+  const bottomInset = insets.bottom + 88;
   const [tab,    setTab]    = useState<'stats'|'board'>('stats');
   const [userId, setUserId] = useState('');
   const pillX   = useSharedValue(0);
@@ -593,9 +595,9 @@ export default function StatsScreen() {
         {userId === '' ? (
           <ActivityIndicator color={T.accent} style={{marginTop:60}}/>
         ) : tab==='stats' ? (
-          <StatsTab userId={userId}/>
+          <StatsTab userId={userId} bottomInset={bottomInset}/>
         ) : (
-          <LeaderboardTab userId={userId}/>
+          <LeaderboardTab userId={userId} bottomInset={bottomInset}/>
         )}
       </View>
     </View>

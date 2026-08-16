@@ -494,7 +494,7 @@ const Waveform = ({ color, paused }: { color:string; paused:boolean }) => {
 //   4. Vol hint          — "Use volume buttons ↕ to adjust"
 
 function MusicPanel({
-  tracks, selectedId, onSelect, onToggle, isPlaying, isPro, adWatchCount,
+  tracks, selectedId, onSelect, onToggle, isPlaying, isPro, adWatchCount, bottomInset,
 }: {
   tracks:       TrackItem[];
   selectedId:   string | null;
@@ -503,6 +503,7 @@ function MusicPanel({
   isPlaying:    boolean;
   isPro:        boolean;
   adWatchCount: Map<string, number>;
+  bottomInset:  number;
 }) {
   const [cat, setCat] = useState<'all'|'binaural'|'nature'>('all');
   const selectedTrack = tracks.find(t => t.id === selectedId) ?? null;
@@ -510,8 +511,9 @@ function MusicPanel({
 
   return (
     <ScrollView
+      style={{ flex: 1 }}
       showsVerticalScrollIndicator={false}
-      contentContainerStyle={mp.scroll}
+      contentContainerStyle={[mp.scroll, { paddingBottom: bottomInset }]}
     >
       {/* ── NOW PLAYING CARD ─────────────────────────────────── */}
       {selectedTrack ? (
@@ -1268,7 +1270,7 @@ export default function FocusScreen() {
 
       {/* ── MUSIC TAB ─────────────────────────────────── */}
       {focusTab === 'music' && (
-        <>
+        <View style={{ flex: 1 }}>
           <MusicPanel
             tracks={ALL_TRACKS}
             selectedId={selectedTrack?.id ?? null}
@@ -1277,10 +1279,10 @@ export default function FocusScreen() {
             isPlaying={musicPlaying}
             isPro={isPro}
             adWatchCount={adWatchCount}
+            bottomInset={insets.bottom + 88}
           />
-
           {/* Music mascot removed — no image asset available */}
-        </>
+        </View>
       )}
 
       {/* XP Celebration Modal — shown on focus session complete */}
